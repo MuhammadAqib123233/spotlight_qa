@@ -20,47 +20,64 @@
 
 #!/bin/sh
 
+# set -e
+
+# echo ">>> ci_pre_xcodebuild.sh started"
+
+# # ── Install Homebrew dependencies ──────────────────────────────
+# brew install cocoapods || true
+
+# # ── Flutter install ────────────────────────────────────────────
+# FLUTTER_VERSION="3.24.0"   # ← match your local flutter version exactly
+
+# git clone https://github.com/flutter/flutter.git \
+#   --depth 1 \
+#   -b $FLUTTER_VERSION \
+#   "$HOME/flutter"
+
+# export PATH="$PATH:$HOME/flutter/bin"
+
+# flutter --version
+
+# # ── Project setup ─────────────────────────────────────────────
+# cd "$CI_PRIMARY_REPOSITORY_PATH"
+
+# flutter pub get
+
+# # ── Generate the missing Swift Package ────────────────────────
+# cd ios
+
+# # This generates FlutterGeneratedPluginSwiftPackage
+# flutter build ios --config-only --no-codesign || true
+
+# pod install --repo-update
+
+# echo ">>> ci_pre_xcodebuild.sh completed"
+# ```
+
+# > **Key addition:** `flutter build ios --config-only --no-codesign` — this explicitly triggers generation of `FlutterGeneratedPluginSwiftPackage` without doing a full build.
+
+# ---
+
+# ## 4. Check your Xcode project settings
+
+# Open `ios/Runner.xcodeproj/project.pbxproj` and search for `FlutterGeneratedPluginSwiftPackage`. You'll see something like:
+# ```
+# path = ephemeral/Packages/FlutterGeneratedPluginSwiftPackage;
+
+#!/bin/sh
 set -e
 
-echo ">>> ci_pre_xcodebuild.sh started"
+echo "Installing Flutter..."
 
-# ── Install Homebrew dependencies ──────────────────────────────
-brew install cocoapods || true
+git clone https://github.com/flutter/flutter.git -b stable --depth 1
+export PATH="$PATH:`pwd`/flutter/bin"
 
-# ── Flutter install ────────────────────────────────────────────
-FLUTTER_VERSION="3.24.0"   # ← match your local flutter version exactly
+flutter doctor
 
-git clone https://github.com/flutter/flutter.git \
-  --depth 1 \
-  -b $FLUTTER_VERSION \
-  "$HOME/flutter"
-
-export PATH="$PATH:$HOME/flutter/bin"
-
-flutter --version
-
-# ── Project setup ─────────────────────────────────────────────
-cd "$CI_PRIMARY_REPOSITORY_PATH"
-
+echo "Running flutter pub get"
 flutter pub get
 
-# ── Generate the missing Swift Package ────────────────────────
+echo "Generating iOS files"
 cd ios
-
-# This generates FlutterGeneratedPluginSwiftPackage
-flutter build ios --config-only --no-codesign || true
-
-pod install --repo-update
-
-echo ">>> ci_pre_xcodebuild.sh completed"
-```
-
-> **Key addition:** `flutter build ios --config-only --no-codesign` — this explicitly triggers generation of `FlutterGeneratedPluginSwiftPackage` without doing a full build.
-
----
-
-## 4. Check your Xcode project settings
-
-Open `ios/Runner.xcodeproj/project.pbxproj` and search for `FlutterGeneratedPluginSwiftPackage`. You'll see something like:
-```
-path = ephemeral/Packages/FlutterGeneratedPluginSwiftPackage;
+pod install
