@@ -11,6 +11,4 @@ flutter pub get
 
 # Generate iOS files
 flutter build ios --release --no-codesign
-
-
 pod install
