@@ -1,18 +1,16 @@
 #!/bin/sh
 set -e
 
-echo "Installing Flutter"
+echo "Preparing Flutter project"
 
-git clone https://github.com/flutter/flutter.git -b stable --depth 1
-export PATH="$PATH:`pwd`/flutter/bin"
+# Go to project root
+cd $CI_PRIMARY_REPOSITORY_PATH
 
-flutter --version
-
-echo "Getting Flutter packages"
+# Fetch dependencies
 flutter pub get
 
-echo "Generating iOS build files"
-flutter build ios --no-codesign
+# Generate iOS files
+flutter build ios --release --no-codesign
 
-cd ios
+
 pod install
