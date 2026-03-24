@@ -21,15 +21,17 @@ import 'package:webview_flutter/webview_flutter.dart';
   }
 
   class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin{
-    bool _isLoading = true;
-    int _progress = 0;
+    
     
 
     WebDataController webCon = Get.find<WebDataController>();
+    String initialUrl = "https://www.spotlight-qa.com/?device_type=mobile";
     @override
     void initState() {
       super.initState();
-      log("homepage initializeddd");
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+    webCon.setInitialUrl(initialUrl);
+  });
       webCon.homecontroller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setUserAgent(
@@ -40,26 +42,16 @@ import 'package:webview_flutter/webview_flutter.dart';
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageStarted: (url) {
-              setState(() {
-                _isLoading = true;
-              });
+              print("page started ${webCon.isLoading.value}");
+              webCon.isLoading.value = true;
             },
             onProgress: (progress) {
-              setState(() {
-                _progress = progress;
-              });
+              webCon.progress.value = progress;
             },
-            onPageFinished: (url) {
-              setState(() {
-                _isLoading = false;
-              });
-
-              // webCon.homecontroller.runJavaScript("""
-              //   document.getElementById("masthead").style.display="none";
-              //   document.getElementById('colophon').style.display = 'none';
-              // """);
-
-              // Fix viewport to ensure full page renders correctly
+            onPageFinished: (url)async{
+              print("page finished");
+              webCon.isLoading.value = false;
+              webCon.canGoBackState.value = await webCon.canGoBack();
              webCon.homecontroller.runJavaScript("""
             var meta = document.querySelector('meta[name="viewport"]');
             if (!meta) {
@@ -71,38 +63,44 @@ import 'package:webview_flutter/webview_flutter.dart';
             window.scrollTo(0, 0);
   """);
             },
+            onUrlChange: (url) async{
+              webCon.setCurrentUrl(url.url ?? '');
+              webCon.canGoBackState.value = await webCon.canGoBack(); // ✅ here
+            },
           ),
         )
         ..loadRequest(
-          Uri.parse('https://www.spotlight-qa.com?device_type=mobile'),
+          Uri.parse(initialUrl),
         );
     }
 
     @override
     Widget build(BuildContext context) {
-    return SafeArea(
-      top: true,
-      child: Stack(
-            children: [
-              WebViewWidget(controller: webCon.homecontroller),
-      
-              /// Loader
-              if (_isLoading)
-                Container(
-                  color: Colors.white,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 12),
-                        Text("Loading... $_progress%"),
-                      ],
+    return Obx(
+      () => SafeArea(
+        top: true,
+        child: Stack(
+              children: [
+                WebViewWidget(controller: webCon.homecontroller),
+        
+                /// Loader
+                if (webCon.isLoading.value)
+                  Container(
+                    color: Colors.white,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 12),
+                          Text("Loading... ${webCon.progress.value}%"),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
+              ],
+            ),
+      ),
     );
     }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:spotlightqa/controller/WebDataController.dart';
 
 class HomePageController extends GetxController{
   bool isloading = true;
@@ -20,6 +21,8 @@ class HomePageController extends GetxController{
 
   void onPageChanged(int value) {
     selectedTab.value = value;
+    // Get.find<WebDataController>().isLoading.value = true;
+    // Get.find<WebDataController>().progress.value = 0;
   }
 
   void onTabChanged(int value) {
