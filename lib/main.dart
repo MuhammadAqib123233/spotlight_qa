@@ -1,4 +1,5 @@
 import 'package:spotlightqa/controller/WebDataController.dart';
+import 'package:spotlightqa/services/CheckInternetService.dart';
 import 'package:spotlightqa/views/screens/HomePage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -31,5 +32,6 @@ class AppBindings extends Bindings{
    @override
   void dependencies() {
     Get.put<WebDataController>(WebDataController(), permanent: true);
+    Get.put<InternetCheckService>(InternetCheckService(), permanent: true);
   }
 }

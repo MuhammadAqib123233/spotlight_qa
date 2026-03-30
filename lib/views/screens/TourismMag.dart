@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:spotlightqa/controller/WebDataController.dart';
+import 'package:spotlightqa/services/CheckInternetService.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 class TourismMag extends StatefulWidget {
   const TourismMag({super.key});
@@ -14,10 +17,14 @@ class TourismMag extends StatefulWidget {
 class _TourismMagState extends State<TourismMag> with AutomaticKeepAliveClientMixin {
   WebDataController webCon = Get.find<WebDataController>();
     String initialUrl = "https://www.spotlight-qa.com/hospitality-tourism-mag/?device_type=mobile";
+    InternetCheckService internetCon = Get.find<InternetCheckService>();
+    static const int _pageIndex = 5;
+    Timer? _loadingTimer;
     @override
     void initState() {
       super.initState();
       WidgetsBinding.instance.addPostFrameCallback((_) {
+    webCon.setPageLoading(_pageIndex, true);
     webCon.setInitialUrl(initialUrl);
   });
       webCon.hospitalityController = WebViewController()
@@ -29,15 +36,45 @@ class _TourismMagState extends State<TourismMag> with AutomaticKeepAliveClientMi
         ..clearCache()  
         ..setNavigationDelegate(
           NavigationDelegate(
-            onPageStarted: (url) {
-              webCon.isLoading.value = true;
-            },
+              //           onPageStarted: (url) {
+  //             webCon.isLoading.value = true;
+  //             webCon.setPageLoading(_pageIndex, true);
+  //             print("page started ${webCon.isLoading.value}");
+  //              Future.delayed(Duration(seconds: 10), () {
+  //              if (webCon.pageLoadingState[_pageIndex] ?? true) {
+  //              webCon.setPageLoading(_pageIndex, false);
+  //              }
+  // });
+  //           },
+  onPageStarted: (url) {
+  webCon.setPageLoading(_pageIndex, true);
+  
+  // Cancel any previous timer first
+  _loadingTimer?.cancel();
+  
+  // Start cancellable timer
+  _loadingTimer = Timer(const Duration(seconds: 10), () {
+    webCon.setPageLoading(_pageIndex, false);
+  });
+},
+            // onWebResourceError: (error) {
+            //   print("error ${error}");
+            //   webCon.isLoading.value = false;
+            //   webCon.setPageLoading(_pageIndex, false);
+            // },
+            onWebResourceError: (error) {
+  if (error.isForMainFrame ?? true) {
+    _loadingTimer?.cancel();
+    webCon.setPageLoading(_pageIndex, false);
+  }
+},
             onProgress: (progress) {
               webCon.progress.value = progress;
             },
             onPageFinished: (url)async{
               print("page finished");
-              webCon.isLoading.value = false;
+               _loadingTimer?.cancel(); // ← page loaded fine, cancel the timer
+  webCon.setPageLoading(_pageIndex, false);
               webCon.canGoBackState.value = await webCon.canGoBack();
              webCon.hospitalityController.runJavaScript("""
             var meta = document.querySelector('meta[name="viewport"]');
@@ -61,33 +98,65 @@ class _TourismMagState extends State<TourismMag> with AutomaticKeepAliveClientMi
         );
     }
 
-  @override
+     @override
   Widget build(BuildContext context) {
-   return Obx(
-     () {
-       return Stack(
-            children: [
-              WebViewWidget(controller: webCon.hospitalityController),
-       
-              /// Loader
-              if (webCon.isLoading.value)
-                Container(
-                  color: Colors.white,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 12),
-                        Text("Loading... ${webCon.progress.value}%"),
-                      ],
-                    ),
-                  ),
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+
+    return Obx(() {
+      // *** FIX: observe per-page loading state ***
+      final isLoading = webCon.pageLoadingState[_pageIndex] ?? true;
+      final hasInternet = internetCon.hasInternet.value;
+
+      return Stack(
+        children: [
+          // WebView always in the tree — never remove it
+          WebViewWidget(controller: webCon.hospitalityController),
+
+          // Loading overlay — shows immediately on first load and page navigation
+          if (isLoading && hasInternet)
+            Container(
+              color: Colors.white,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text("Loading..."),
+                  ],
                 ),
-            ],
-          );
-     }
-   );
+              ),
+            ),
+
+          // No internet overlay
+          if (!hasInternet)
+            Container(
+              color: Colors.white,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.wifi_off, size: 60, color: Colors.grey),
+                    const SizedBox(height: 10),
+                    const Text("No Internet Connection"),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        internetCon.checkInternet();
+                        if (internetCon.hasInternet.value) {
+                          webCon.emagzineController
+                              .loadRequest(Uri.parse(initialUrl));
+                        }
+                      },
+                      child: const Text("Retry"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+    });
   }
 
   @override
