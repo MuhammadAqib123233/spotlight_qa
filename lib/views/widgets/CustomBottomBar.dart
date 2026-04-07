@@ -72,7 +72,7 @@ class CustomBottomBar extends StatelessWidget{
         onTabChanged(4);
         webCon.setPageIndex(4); 
       },
-      child: Icon(Icons.medical_services,
+      child: Icon(Icons.palette,
       color: AppColors().iconColor,
       size: 30,
       ),

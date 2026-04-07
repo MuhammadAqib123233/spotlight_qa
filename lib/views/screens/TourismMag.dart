@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -7,6 +8,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:spotlightqa/controller/WebDataController.dart';
 import 'package:spotlightqa/services/CheckInternetService.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 class TourismMag extends StatefulWidget {
   const TourismMag({super.key});
 
@@ -18,7 +21,7 @@ class _TourismMagState extends State<TourismMag> with AutomaticKeepAliveClientMi
   WebDataController webCon = Get.find<WebDataController>();
     String initialUrl = "https://www.spotlight-qa.com/hospitality-tourism-mag/?device_type=mobile";
     InternetCheckService internetCon = Get.find<InternetCheckService>();
-    static const int _pageIndex = 5;
+    static const int _pageIndex = 3;
     Timer? _loadingTimer;
     @override
     void initState() {
@@ -27,75 +30,93 @@ class _TourismMagState extends State<TourismMag> with AutomaticKeepAliveClientMi
     webCon.setPageLoading(_pageIndex, true);
     webCon.setInitialUrl(initialUrl);
   });
-      webCon.hospitalityController = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setUserAgent(
-    'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 '
-    '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
-  )
-        ..clearCache()  
-        ..setNavigationDelegate(
-          NavigationDelegate(
-              //           onPageStarted: (url) {
-  //             webCon.isLoading.value = true;
-  //             webCon.setPageLoading(_pageIndex, true);
-  //             print("page started ${webCon.isLoading.value}");
-  //              Future.delayed(Duration(seconds: 10), () {
-  //              if (webCon.pageLoadingState[_pageIndex] ?? true) {
-  //              webCon.setPageLoading(_pageIndex, false);
-  //              }
-  // });
-  //           },
-  onPageStarted: (url) {
-  webCon.setPageLoading(_pageIndex, true);
-  
-  // Cancel any previous timer first
-  _loadingTimer?.cancel();
-  
-  // Start cancellable timer
-  _loadingTimer = Timer(const Duration(seconds: 10), () {
-    webCon.setPageLoading(_pageIndex, false);
-  });
-},
-            // onWebResourceError: (error) {
-            //   print("error ${error}");
-            //   webCon.isLoading.value = false;
-            //   webCon.setPageLoading(_pageIndex, false);
-            // },
-            onWebResourceError: (error) {
-  if (error.isForMainFrame ?? true) {
-    _loadingTimer?.cancel();
-    webCon.setPageLoading(_pageIndex, false);
+      // ─── iOS specific params ───
+  late final PlatformWebViewControllerCreationParams params;
+  if (Platform.isIOS) {
+    params = WebKitWebViewControllerCreationParams(
+      allowsInlineMediaPlayback: true,        // ← plays video inline
+      mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{
+        PlaybackMediaTypes.video,
+        PlaybackMediaTypes.audio
+      }, // ← no user gesture needed
+    );
+    final WebKitWebViewController webKitController =
+      webCon.hospitalityController.platform as WebKitWebViewController;
+      webKitController.setInspectable(true);
+  } 
+  // else {
+  //   params = const PlatformWebViewControllerCreationParams();
+  // }
+
+  webCon.hospitalityController = WebViewController.fromPlatformCreationParams(params)
+    ..setJavaScriptMode(JavaScriptMode.unrestricted)
+    ..setUserAgent(
+      'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+    )
+    ..clearCache()
+    ..setNavigationDelegate(
+      NavigationDelegate(
+        onPageStarted: (url) {
+          webCon.setPageLoading(_pageIndex, true);
+          _loadingTimer?.cancel();
+          _loadingTimer = Timer(const Duration(seconds: 10), () {
+            webCon.setPageLoading(_pageIndex, false);
+          });
+        },
+        onWebResourceError: (error) {
+          if (error.isForMainFrame ?? true) {
+            _loadingTimer?.cancel();
+            webCon.setPageLoading(_pageIndex, false);
+          }
+        },
+        onProgress: (progress) {
+          webCon.progress.value = progress;
+        },
+        onPageFinished: (url) async {
+          _loadingTimer?.cancel();
+          webCon.setPageLoading(_pageIndex, false);
+          webCon.canGoBackState.value = await webCon.canGoBack();
+
+          await webCon.hospitalityController.runJavaScript("""
+              (function() {
+                function fixVideos() {
+                  document.querySelectorAll('video').forEach(function(v) {
+                    v.setAttribute('playsinline', '');
+                    v.setAttribute('webkit-playsinline', '');
+                    v.removeAttribute('autoplay');
+                    
+                    // Fix black box by setting poster if missing
+                    if (!v.getAttribute('poster')) {
+                      v.style.backgroundColor = '#000';
+                    }
+                    
+                    // Show native controls so user sees play button
+                    v.controls = true;
+                  });
+                }
+
+                // Run immediately and observe for dynamic videos
+                fixVideos();
+                const observer = new MutationObserver(fixVideos);
+                observer.observe(document.body, { childList: true, subtree: true });
+              })();
+            """);
+        },
+        onUrlChange: (url) async {
+          webCon.setCurrentUrl(url.url ?? '');
+          webCon.canGoBackState.value = await webCon.canGoBack();
+        },
+      ),
+    )
+    ..loadRequest(Uri.parse(initialUrl));
+
+  // ─── Android specific settings ───
+  if (webCon.hospitalityController.platform is AndroidWebViewController) {
+    AndroidWebViewController.enableDebugging(true);
+    (webCon.hospitalityController.platform as AndroidWebViewController)
+        .setMediaPlaybackRequiresUserGesture(false);
   }
-},
-            onProgress: (progress) {
-              webCon.progress.value = progress;
-            },
-            onPageFinished: (url)async{
-              print("page finished");
-               _loadingTimer?.cancel(); // ← page loaded fine, cancel the timer
-  webCon.setPageLoading(_pageIndex, false);
-              webCon.canGoBackState.value = await webCon.canGoBack();
-             webCon.hospitalityController.runJavaScript("""
-            var meta = document.querySelector('meta[name="viewport"]');
-            if (!meta) {
-            meta = document.createElement('meta');
-            meta.name = 'viewport';
-            document.head.appendChild(meta);
-           }
-           meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-            window.scrollTo(0, 0);
-  """);
-            },
-            onUrlChange: (url) async{
-              webCon.setCurrentUrl(url.url ?? '');
-              webCon.canGoBackState.value = await webCon.canGoBack(); // ✅ here
-            },
-          ),
-        )
-        ..loadRequest(
-          Uri.parse(initialUrl),
-        );
     }
 
      @override

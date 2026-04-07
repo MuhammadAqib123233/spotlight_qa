@@ -49,5 +49,19 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-</dict>
+	
+
+    <!-- Allow inline media -->
+    <key>WebKitMediaPlaybackAllowsInline</key>
+    <true/>
+	<key>NSAppTransportSecurity</key>
+    <dict>
+      <key>NSAllowsArbitraryLoads</key>
+      <true/>
+      <key>NSAllowsArbitraryLoadsInWebContent</key>  <!-- ← ADD THIS -->
+      <true/>
+    </dict>
+	<key>io.flutter.embedded_views_preview</key>
+    <true/>
+    </dict>
 </plist>

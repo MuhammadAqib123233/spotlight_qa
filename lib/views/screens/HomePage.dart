@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:spotlightqa/controller/HomepageController.dart';
 import 'package:spotlightqa/controller/SplashScreenCOntroller.dart';
@@ -14,6 +15,8 @@ import 'package:get/get.dart';
 import 'package:spotlightqa/views/widgets/CustomAppBar.dart';
 import 'package:spotlightqa/views/widgets/CustomBottomBar.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
   class HomePage extends StatefulWidget {
     const HomePage({super.key});
@@ -32,82 +35,175 @@ import 'package:webview_flutter/webview_flutter.dart';
     static const int _pageIndex = 0;
     Timer? _loadingTimer;
     @override
-    void initState() {
-      super.initState();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+void initState() {
+  super.initState();
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     webCon.setPageLoading(_pageIndex, true);
     webCon.setInitialUrl(initialUrl);
   });
-      webCon.homecontroller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setUserAgent(
-    'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 '
-    '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
-  )
-        ..clearCache()  
-        ..setNavigationDelegate(
-          NavigationDelegate(
-              //           onPageStarted: (url) {
-  //             webCon.isLoading.value = true;
-  //             webCon.setPageLoading(_pageIndex, true);
-  //             print("page started ${webCon.isLoading.value}");
-  //              Future.delayed(Duration(seconds: 10), () {
-  //              if (webCon.pageLoadingState[_pageIndex] ?? true) {
-  //              webCon.setPageLoading(_pageIndex, false);
-  //              }
-  // });
-  //           },
-  onPageStarted: (url) {
-  webCon.setPageLoading(_pageIndex, true);
-  
-  // Cancel any previous timer first
-  _loadingTimer?.cancel();
-  
-  // Start cancellable timer
-  _loadingTimer = Timer(const Duration(seconds: 10), () {
-    webCon.setPageLoading(_pageIndex, false);
-  });
-},
-            // onWebResourceError: (error) {
-            //   print("error ${error}");
-            //   webCon.isLoading.value = false;
-            //   webCon.setPageLoading(_pageIndex, false);
-            // },
-            onWebResourceError: (error) {
-  if (error.isForMainFrame ?? true) {
-    _loadingTimer?.cancel();
-    webCon.setPageLoading(_pageIndex, false);
+
+  // ─── iOS specific params ───
+  // late final PlatformWebViewControllerCreationParams params;
+  // if (Platform.isIOS) {
+  //   params = WebKitWebViewControllerCreationParams(
+  //     allowsInlineMediaPlayback: true,        // ← plays video inline
+  //     mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{}, // ← no user gesture needed
+  //   );
+  // } else {
+  //   params = const PlatformWebViewControllerCreationParams();
+  // }
+
+  // webCon.homecontroller = WebViewController.fromPlatformCreationParams(params)
+  //   ..setJavaScriptMode(JavaScriptMode.unrestricted)
+  //   ..setUserAgent(
+  //     'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 '
+  //     '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+  //   )
+  //   ..clearCache()
+  //   ..setNavigationDelegate(
+  //     NavigationDelegate(
+  //       onPageStarted: (url) {
+  //         webCon.setPageLoading(_pageIndex, true);
+  //         _loadingTimer?.cancel();
+  //         _loadingTimer = Timer(const Duration(seconds: 10), () {
+  //           webCon.setPageLoading(_pageIndex, false);
+  //         });
+  //       },
+  //       onWebResourceError: (error) {
+  //         if (error.isForMainFrame ?? true) {
+  //           _loadingTimer?.cancel();
+  //           webCon.setPageLoading(_pageIndex, false);
+  //         }
+  //       },
+  //       onProgress: (progress) {
+  //         webCon.progress.value = progress;
+  //       },
+  //       onPageFinished: (url) async {
+  //         _loadingTimer?.cancel();
+  //         webCon.setPageLoading(_pageIndex, false);
+  //         webCon.canGoBackState.value = await webCon.canGoBack();
+
+  //         webCon.homecontroller.runJavaScript("""
+  //           var meta = document.querySelector('meta[name="viewport"]');
+  //           if (!meta) {
+  //             meta = document.createElement('meta');
+  //             meta.name = 'viewport';
+  //             document.head.appendChild(meta);
+  //           }
+  //           meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+  //           window.scrollTo(0, 0);
+
+  //           // force inline video
+  //           document.querySelectorAll('video').forEach(function(v) {
+  //             v.setAttribute('playsinline', '');
+  //             v.setAttribute('webkit-playsinline', '');
+  //           });
+  //         """);
+  //       },
+  //       onUrlChange: (url) async {
+  //         webCon.setCurrentUrl(url.url ?? '');
+  //         webCon.canGoBackState.value = await webCon.canGoBack();
+  //       },
+  //     ),
+  //   )
+  //   ..loadRequest(Uri.parse(initialUrl));
+
+  // // ─── Android specific settings ───
+  // if (webCon.homecontroller.platform is AndroidWebViewController) {
+  //   AndroidWebViewController.enableDebugging(true);
+  //   (webCon.homecontroller.platform as AndroidWebViewController)
+  //       .setMediaPlaybackRequiresUserGesture(false);
+  // }
+
+  // ─── iOS specific params ───
+  late final PlatformWebViewControllerCreationParams params;
+  if (Platform.isIOS) {
+    params = WebKitWebViewControllerCreationParams(
+      allowsInlineMediaPlayback: true,        // ← plays video inline
+      mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{
+        PlaybackMediaTypes.audio,
+        PlaybackMediaTypes.video
+      }, // ← no user gesture needed
+    );
+    final WebKitWebViewController webKitController =
+      webCon.homecontroller.platform as WebKitWebViewController;
+      webKitController.setInspectable(true);
+  } 
+  // else {
+  //   params = const PlatformWebViewControllerCreationParams();
+  // }
+
+  webCon.homecontroller = WebViewController.fromPlatformCreationParams(params)
+    ..setJavaScriptMode(JavaScriptMode.unrestricted)
+    ..setUserAgent(
+      'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+    )
+    ..clearCache()
+    ..setNavigationDelegate(
+      NavigationDelegate(
+        onPageStarted: (url) {
+          webCon.setPageLoading(_pageIndex, true);
+          _loadingTimer?.cancel();
+          _loadingTimer = Timer(const Duration(seconds: 10), () {
+            webCon.setPageLoading(_pageIndex, false);
+          });
+        },
+        onWebResourceError: (error) {
+          if (error.isForMainFrame ?? true) {
+            _loadingTimer?.cancel();
+            webCon.setPageLoading(_pageIndex, false);
+          }
+        },
+        onProgress: (progress) {
+          webCon.progress.value = progress;
+        },
+        onPageFinished: (url) async {
+          _loadingTimer?.cancel();
+          webCon.setPageLoading(_pageIndex, false);
+          webCon.canGoBackState.value = await webCon.canGoBack();
+
+           await webCon.homecontroller.runJavaScript("""
+              (function() {
+                function fixVideos() {
+                  document.querySelectorAll('video').forEach(function(v) {
+                    v.setAttribute('playsinline', '');
+                    v.setAttribute('webkit-playsinline', '');
+                    v.removeAttribute('autoplay');
+                    
+                    // Fix black box by setting poster if missing
+                    if (!v.getAttribute('poster')) {
+                      v.style.backgroundColor = '#000';
+                    }
+                    
+                    // Show native controls so user sees play button
+                    v.controls = true;
+                  });
+                }
+
+                // Run immediately and observe for dynamic videos
+                fixVideos();
+                const observer = new MutationObserver(fixVideos);
+                observer.observe(document.body, { childList: true, subtree: true });
+              })();
+            """);
+        },
+        onUrlChange: (url) async {
+          webCon.setCurrentUrl(url.url ?? '');
+          webCon.canGoBackState.value = await webCon.canGoBack();
+        },
+      ),
+    )
+    ..loadRequest(Uri.parse(initialUrl));
+
+  // ─── Android specific settings ───
+  if (webCon.homecontroller.platform is AndroidWebViewController) {
+    AndroidWebViewController.enableDebugging(true);
+    (webCon.homecontroller.platform as AndroidWebViewController)
+        .setMediaPlaybackRequiresUserGesture(false);
   }
-},
-            onProgress: (progress) {
-              webCon.progress.value = progress;
-            },
-            onPageFinished: (url)async{
-              print("page finished");
-               _loadingTimer?.cancel(); // ← page loaded fine, cancel the timer
-  webCon.setPageLoading(_pageIndex, false);
-              webCon.canGoBackState.value = await webCon.canGoBack();
-             webCon.homecontroller.runJavaScript("""
-            var meta = document.querySelector('meta[name="viewport"]');
-            if (!meta) {
-            meta = document.createElement('meta');
-            meta.name = 'viewport';
-            document.head.appendChild(meta);
-           }
-           meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-            window.scrollTo(0, 0);
-  """);
-            },
-            onUrlChange: (url) async{
-              webCon.setCurrentUrl(url.url ?? '');
-              webCon.canGoBackState.value = await webCon.canGoBack(); // ✅ here
-            },
-          ),
-        )
-        ..loadRequest(
-          Uri.parse(initialUrl),
-        );
-    }
+}
 
      @override
   Widget build(BuildContext context) {

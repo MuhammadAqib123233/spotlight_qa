@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:spotlightqa/controller/HomepageController.dart';
 import 'package:spotlightqa/controller/WebDataController.dart';
@@ -12,6 +13,8 @@ import 'package:get/get.dart';
 import 'package:spotlightqa/views/widgets/CustomAppBar.dart';
 import 'package:spotlightqa/views/widgets/CustomBottomBar.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 class spotlightqa extends StatefulWidget {
   const spotlightqa({super.key});
@@ -35,6 +38,19 @@ WebDataController webCon = Get.find<WebDataController>();
     webCon.setPageLoading(_pageIndex, true);
     webCon.setInitialUrl(initialUrl);
   });
+      late final PlatformWebViewControllerCreationParams params;
+  if (Platform.isIOS) {
+    params = WebKitWebViewControllerCreationParams(
+      allowsInlineMediaPlayback: true,        // ← plays video inline
+      mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{
+        PlaybackMediaTypes.video,
+        PlaybackMediaTypes.audio
+      }, // ← no user gesture needed
+    );
+    final WebKitWebViewController webKitController =
+      webCon.emagzineController.platform as WebKitWebViewController;
+      webKitController.setInspectable(true);
+  } 
       webCon.emagzineController = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setUserAgent(
@@ -84,16 +100,30 @@ WebDataController webCon = Get.find<WebDataController>();
                _loadingTimer?.cancel(); // ← page loaded fine, cancel the timer
   webCon.setPageLoading(_pageIndex, false);
               webCon.canGoBackState.value = await webCon.canGoBack();
-             webCon.emagzineController.runJavaScript("""
-            var meta = document.querySelector('meta[name="viewport"]');
-            if (!meta) {
-            meta = document.createElement('meta');
-            meta.name = 'viewport';
-            document.head.appendChild(meta);
-           }
-           meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-            window.scrollTo(0, 0);
-  """);
+             await webCon.emagzineController.runJavaScript("""
+              (function() {
+                function fixVideos() {
+                  document.querySelectorAll('video').forEach(function(v) {
+                    v.setAttribute('playsinline', '');
+                    v.setAttribute('webkit-playsinline', '');
+                    v.removeAttribute('autoplay');
+                    
+                    // Fix black box by setting poster if missing
+                    if (!v.getAttribute('poster')) {
+                      v.style.backgroundColor = '#000';
+                    }
+                    
+                    // Show native controls so user sees play button
+                    v.controls = true;
+                  });
+                }
+
+                // Run immediately and observe for dynamic videos
+                fixVideos();
+                const observer = new MutationObserver(fixVideos);
+                observer.observe(document.body, { childList: true, subtree: true });
+              })();
+            """);
             },
             onUrlChange: (url) async{
               webCon.setCurrentUrl(url.url ?? '');
@@ -104,6 +134,11 @@ WebDataController webCon = Get.find<WebDataController>();
         ..loadRequest(
           Uri.parse(initialUrl),
         );
+        if (webCon.emagzineController.platform is AndroidWebViewController) {
+    AndroidWebViewController.enableDebugging(true);
+    (webCon.emagzineController.platform as AndroidWebViewController)
+        .setMediaPlaybackRequiresUserGesture(false);
+  }
     }
 
    @override
