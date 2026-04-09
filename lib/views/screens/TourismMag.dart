@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:spotlightqa/controller/WebDataController.dart';
 import 'package:spotlightqa/services/CheckInternetService.dart';
+import 'package:spotlightqa/services/PermissionService.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
@@ -110,7 +111,33 @@ class _TourismMagState extends State<TourismMag> with AutomaticKeepAliveClientMi
       ),
     )
     ..loadRequest(Uri.parse(initialUrl));
+    if (Platform.isIOS) {
+  final webKitController = webCon.homecontroller.platform as WebKitWebViewController;
+  webKitController.setInspectable(true);
 
+  // ✅ Correct way to set permission request handler
+  webKitController.setOnPlatformPermissionRequest(
+    (PlatformWebViewPermissionRequest request) async {
+      debugPrint('WebKit permission types: ${request.types}');
+      final permService = Get.find<PermissionService>();
+      bool granted = false;
+
+      if (request.types.contains(WebViewPermissionResourceType.camera)) {
+        granted = await permService.ensureCameraPermission();
+      } else if (request.types.contains(WebViewPermissionResourceType.microphone)) {
+        granted = true;
+      } else {
+        granted = await permService.ensurePhotosPermission();
+      }
+
+      if (granted) {
+        request.grant();
+      } else {
+        request.deny();
+      }
+    },
+  );
+}
   // ─── Android specific settings ───
   if (webCon.hospitalityController.platform is AndroidWebViewController) {
     AndroidWebViewController.enableDebugging(true);

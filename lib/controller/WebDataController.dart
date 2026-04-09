@@ -1,7 +1,8 @@
 import 'package:get/get.dart';
+import 'package:spotlightqa/services/PermissionService.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-  class WebDataController extends GetxController{
+class WebDataController extends GetxController{
     //RxString homeContent = "".obs;
     var homecontroller = WebViewController();
     var emagzineController = WebViewController();
@@ -109,4 +110,20 @@ import 'package:webview_flutter/webview_flutter.dart';
     }
     return false;
   }
+
+  Future<bool> handlePermissionForUrl(String url) async {
+  final permService = Get.find<PermissionService>();
+
+  // Camera capture (input[type=file] accept="image/*" capture)
+  if (url.contains('camera') || url.contains('capture')) {
+    return await permService.ensureCameraPermission();
+  }
+
+  // Photo library
+  if (url.contains('photo') || url.contains('image')) {
+    return await permService.ensurePhotosPermission();
+  }
+
+  return true; // allow all other navigation
+}
   }

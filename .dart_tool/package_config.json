@@ -50,6 +50,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "cross_file",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/cross_file-0.3.5+2",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
       "name": "csslib",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/csslib-1.0.2",
       "packageUri": "lib/",
@@ -62,6 +68,12 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "dbus",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/dbus-0.7.12",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
       "name": "fake_async",
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/fake_async-1.3.3",
       "packageUri": "lib/",
@@ -72,6 +84,12 @@
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/ffi-2.2.0",
       "packageUri": "lib/",
       "languageVersion": "3.7"
+    },
+    {
+      "name": "file_picker",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/file_picker-11.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "flutter",
@@ -138,6 +156,12 @@
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/flutter_native_splash-2.4.7",
       "packageUri": "lib/",
       "languageVersion": "3.0"
+    },
+    {
+      "name": "flutter_plugin_android_lifecycle",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.31",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
     },
     {
       "name": "flutter_test",
@@ -366,6 +390,12 @@
       "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/webview_flutter_wkwebview-3.23.0",
       "packageUri": "lib/",
       "languageVersion": "3.6"
+    },
+    {
+      "name": "win32",
+      "rootUri": "file:///Users/apple/.pub-cache/hosted/pub.dev/win32-5.15.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
     },
     {
       "name": "xml",

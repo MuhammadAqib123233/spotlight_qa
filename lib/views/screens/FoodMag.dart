@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:spotlightqa/controller/HomepageController.dart';
 import 'package:spotlightqa/controller/WebDataController.dart';
 import 'package:spotlightqa/services/CheckInternetService.dart';
+import 'package:spotlightqa/services/PermissionService.dart';
 import 'package:spotlightqa/views/screens/TourismMag.dart';
 import 'package:spotlightqa/views/utils/Colors.dart';
 import 'package:flutter/material.dart';
@@ -276,6 +277,34 @@ void initState() {
     (webCon.foodController.platform as AndroidWebViewController)
         .setMediaPlaybackRequiresUserGesture(false);
   }
+
+  if (Platform.isIOS) {
+  final webKitController = webCon.homecontroller.platform as WebKitWebViewController;
+  webKitController.setInspectable(true);
+
+  // ✅ Correct way to set permission request handler
+  webKitController.setOnPlatformPermissionRequest(
+    (PlatformWebViewPermissionRequest request) async {
+      debugPrint('WebKit permission types: ${request.types}');
+      final permService = Get.find<PermissionService>();
+      bool granted = false;
+
+      if (request.types.contains(WebViewPermissionResourceType.camera)) {
+        granted = await permService.ensureCameraPermission();
+      } else if (request.types.contains(WebViewPermissionResourceType.microphone)) {
+        granted = true;
+      } else {
+        granted = await permService.ensurePhotosPermission();
+      }
+
+      if (granted) {
+        request.grant();
+      } else {
+        request.deny();
+      }
+    },
+  );
+}
 }
 
      @override

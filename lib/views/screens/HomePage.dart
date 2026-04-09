@@ -6,6 +6,7 @@ import 'package:spotlightqa/controller/HomepageController.dart';
 import 'package:spotlightqa/controller/SplashScreenCOntroller.dart';
 import 'package:spotlightqa/controller/WebDataController.dart';
 import 'package:spotlightqa/services/CheckInternetService.dart';
+import 'package:spotlightqa/services/PermissionService.dart';
 import 'package:spotlightqa/views/screens/FoodMag.dart';
 import 'package:spotlightqa/views/screens/TourismMag.dart';
 import 'package:spotlightqa/views/utils/Colors.dart';
@@ -18,7 +19,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
-  class HomePage extends StatefulWidget {
+class HomePage extends StatefulWidget {
     const HomePage({super.key});
 
     @override
@@ -141,8 +142,32 @@ void initState() {
       '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
     )
     ..clearCache()
+    ..addJavaScriptChannel(
+    'FilePickerChannel',
+    onMessageReceived: (JavaScriptMessage message) async {
+      debugPrint('FilePickerChannel: ${message.message}');
+      final permService = Get.find<PermissionService>();
+      await permService.ensurePhotosOrCameraPermission();
+    },
+  )
     ..setNavigationDelegate(
       NavigationDelegate(
+        // ─── ADD THIS ───────────────────────────────────────
+    onNavigationRequest: (NavigationRequest request) async {
+      // Intercept file picker / camera URLs
+      final url = request.url.toLowerCase();
+      if (url.startsWith('blob:') ||
+          url.contains('file-upload') ||
+          url.contains('capture=') ||
+          url.contains('filepicker')) {
+        print("filepicker url");
+        final allowed = await webCon.handlePermissionForUrl(url);
+        return allowed
+            ? NavigationDecision.navigate
+            : NavigationDecision.prevent;
+      }
+      return NavigationDecision.navigate;
+    },
         onPageStarted: (url) {
           webCon.setPageLoading(_pageIndex, true);
           _loadingTimer?.cancel();
@@ -196,7 +221,34 @@ void initState() {
       ),
     )
     ..loadRequest(Uri.parse(initialUrl));
+  // ── Set platform permission request AFTER controller is built ──
+if (Platform.isIOS) {
+  final webKitController = webCon.homecontroller.platform as WebKitWebViewController;
+  webKitController.setInspectable(true);
 
+  // ✅ Correct way to set permission request handler
+  webKitController.setOnPlatformPermissionRequest(
+    (PlatformWebViewPermissionRequest request) async {
+      debugPrint('WebKit permission types: ${request.types}');
+      final permService = Get.find<PermissionService>();
+      bool granted = false;
+
+      if (request.types.contains(WebViewPermissionResourceType.camera)) {
+        granted = await permService.ensureCameraPermission();
+      } else if (request.types.contains(WebViewPermissionResourceType.microphone)) {
+        granted = true;
+      } else {
+        granted = await permService.ensurePhotosPermission();
+      }
+
+      if (granted) {
+        request.grant();
+      } else {
+        request.deny();
+      }
+    },
+  );
+}
   // ─── Android specific settings ───
   if (webCon.homecontroller.platform is AndroidWebViewController) {
     AndroidWebViewController.enableDebugging(true);

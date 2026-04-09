@@ -15,6 +15,7 @@ let package = Package(
         .library(name: "FlutterGeneratedPluginSwiftPackage", type: .static, targets: ["FlutterGeneratedPluginSwiftPackage"])
     ],
     dependencies: [
+        .package(name: "file_picker", path: "/Users/apple/.pub-cache/hosted/pub.dev/file_picker-11.0.2/ios/file_picker"),
         .package(name: "flutter_native_splash", path: "/Users/apple/.pub-cache/hosted/pub.dev/flutter_native_splash-2.4.7/ios/flutter_native_splash"),
         .package(name: "webview_flutter_wkwebview", path: "/Users/apple/.pub-cache/hosted/pub.dev/webview_flutter_wkwebview-3.23.0/darwin/webview_flutter_wkwebview")
     ],
@@ -22,6 +23,7 @@ let package = Package(
         .target(
             name: "FlutterGeneratedPluginSwiftPackage",
             dependencies: [
+                .product(name: "file-picker", package: "file_picker"),
                 .product(name: "flutter-native-splash", package: "flutter_native_splash"),
                 .product(name: "webview-flutter-wkwebview", package: "webview_flutter_wkwebview")
             ]
